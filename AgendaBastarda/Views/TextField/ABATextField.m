@@ -11,15 +11,19 @@
 
 typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 {
-    ABATextFieldConstraintsFaseLeft = 0,
-    ABATextFieldConstraintsFaseRight = 1,
+    ABATextFieldConstraintsFaseUnknown  = 0,
+    ABATextFieldConstraintsFaseLeft     = 1,
+    ABATextFieldConstraintsFaseRight    = 2,
 };
 
 @interface ABATextField ()
 
-@property (nonatomic, strong) NSLayoutConstraint *movablePlaceholderAutoPinEdgeToSuperviewEdge;
 @property (nonatomic, assign) ABATextFieldConstraintsFase constraintsFase;
 @property (nonatomic, strong) UIView *separationLine;
+
+@property (nonatomic, strong) NSLayoutConstraint *constraintAlignHorizontal;
+@property (nonatomic, strong) NSLayoutConstraint *constraintLeft;
+@property (nonatomic, strong) NSLayoutConstraint *constraintRight;
 
 @end
 
@@ -36,21 +40,10 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
         [self addSubview:self.movablePlaceholder];
         [self addSubview:self.separationLine];
         
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(textDidBeginEditing)
-                                                     name:UITextFieldTextDidBeginEditingNotification
-                                                   object:self];
+        [self setUpNotification];
         
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(textDidChange)
-                                                     name:UITextFieldTextDidChangeNotification
-                                                   object:self];
+        [self setUpConstraint];
         
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(textDidEndEditing)
-                                                     name:UITextFieldTextDidEndEditingNotification
-                                                   object:self];
-
         self.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     }
     
@@ -63,7 +56,8 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 {
     if (!_movablePlaceholder)
     {
-        _movablePlaceholder = [UILabel newAutoLayoutView];
+        _movablePlaceholder = [UILabel new];
+        _movablePlaceholder.translatesAutoresizingMaskIntoConstraints = NO;
 
         _movablePlaceholder.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
         _movablePlaceholder.textAlignment = NSTextAlignmentLeft;
@@ -94,51 +88,63 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
     
     /*-------------------*/
     
-    [self.separationLine autoSetDimension:ALDimensionHeight toSize:1.5f];
-    
-    [self.separationLine autoPinEdge:ALEdgeRight toEdge:ALEdgeRight ofView:self];
-    [self.separationLine autoPinEdge:ALEdgeLeft toEdge:ALEdgeLeft ofView:self];
-    [self.separationLine autoPinEdge:ALEdgeBottom toEdge:ALEdgeBottom ofView:self];
-    
-    /*-------------------*/
-    
-    if (self.constraintsFase == ABATextFieldConstraintsFaseLeft)
+    if (self.constraintsFase == ABATextFieldConstraintsFaseUnknown)
     {
-        [UIView autoSetPriority:UILayoutPriorityDefaultHigh
-                 forConstraints:^
-         {
-             [self setLeftConstraints];
-         }];
+        [self.separationLine autoSetDimension:ALDimensionHeight toSize:1.5f];
+        
+        [self.separationLine autoPinEdge:ALEdgeRight toEdge:ALEdgeRight ofView:self];
+        [self.separationLine autoPinEdge:ALEdgeLeft toEdge:ALEdgeLeft ofView:self];
+        [self.separationLine autoPinEdge:ALEdgeBottom toEdge:ALEdgeBottom ofView:self];
+        
+        [self addConstraint:self.constraintLeft];
+        [self addConstraint:self.constraintAlignHorizontal];
     }
-    else if(self.constraintsFase == ABATextFieldConstraintsFaseRight)
-    {
-        [self setRightConstraints];
-    }
+}
+
+- (void)setUpConstraint
+{
+    self.constraintLeft = [NSLayoutConstraint constraintWithItem:self.movablePlaceholder
+                                                       attribute:NSLayoutAttributeLeft
+                                                       relatedBy:NSLayoutRelationEqual
+                                                          toItem:self
+                                                       attribute:NSLayoutAttributeLeft
+                                                      multiplier:1.0f
+                                                        constant:10.0f];
+    
+    self.constraintRight = [NSLayoutConstraint constraintWithItem:self.movablePlaceholder
+                                                        attribute:NSLayoutAttributeRight
+                                                        relatedBy:NSLayoutRelationEqual
+                                                           toItem:self
+                                                        attribute:NSLayoutAttributeRight
+                                                       multiplier:1.0f
+                                                         constant:-10.0f];
+    
+    self.constraintAlignHorizontal = [NSLayoutConstraint constraintWithItem:self.movablePlaceholder
+                                                                  attribute:NSLayoutAttributeCenterY
+                                                                  relatedBy:NSLayoutRelationEqual
+                                                                     toItem:self
+                                                                  attribute:NSLayoutAttributeCenterY
+                                                                 multiplier:1.0f
+                                                                   constant:0.0f];
 }
 
 - (void)setLeftConstraints
 {
-    [self.movablePlaceholder autoAlignAxis:ALAxisHorizontal toSameAxisOfView:self];
-    self.movablePlaceholderAutoPinEdgeToSuperviewEdge = [self.movablePlaceholder autoPinEdgeToSuperviewEdge:ALEdgeLeft
-                                                                                                       withInset:10.0f];
+    [self removeConstraint:self.constraintRight];
+    [self addConstraint:self.constraintLeft];
 }
 
 - (void)setRightConstraints
 {
-    [self.movablePlaceholder autoAlignAxis:ALAxisHorizontal toSameAxisOfView:self];
-    self.movablePlaceholderAutoPinEdgeToSuperviewEdge = [self.movablePlaceholder autoPinEdgeToSuperviewEdge:ALEdgeRight
-                                                                                                  withInset:10.0f];
+    [self removeConstraint:self.constraintLeft];
+    [self addConstraint:self.constraintRight];
 }
 
 #pragma mark - Setters
 
-- (void)setMovablePlaceholderText:(NSString *)movablePlaceholderText
+- (void)setPlaceholder:(NSString *)placeholder
 {
-    [self willChangeValueForKey:@"movablePlaceholderText"];
-    _movablePlaceholderText = movablePlaceholderText;
-    [self didChangeValueForKey:@"movablePlaceholderText"];
-    
-    self.movablePlaceholder.text = movablePlaceholderText;
+    self.movablePlaceholder.text = placeholder;
 }
 
 - (void)setTextColor:(UIColor *)textColor
@@ -155,6 +161,24 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 }
 
 #pragma mark - Notifications
+
+- (void)setUpNotification
+{
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(textDidBeginEditing)
+                                                 name:UITextFieldTextDidBeginEditingNotification
+                                               object:self];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(textDidChange)
+                                                 name:UITextFieldTextDidChangeNotification
+                                               object:self];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(textDidEndEditing)
+                                                 name:UITextFieldTextDidEndEditingNotification
+                                               object:self];
+}
 
 - (void)textDidBeginEditing
 {
@@ -192,22 +216,26 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 
 - (void)animatePlaceholder
 {
-    [self.movablePlaceholderAutoPinEdgeToSuperviewEdge autoRemove];
+    [self layoutIfNeeded];
 
+    if (self.constraintsFase == ABATextFieldConstraintsFaseLeft)
+    {
+        [self setLeftConstraints];
+    }
+    else if(self.constraintsFase == ABATextFieldConstraintsFaseRight)
+    {
+        [self setRightConstraints];
+    }
+    
     [UIView animateWithDuration:0.25
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseInOut
                      animations:^
      {
-
-         [self setNeedsUpdateConstraints];
          [self layoutIfNeeded];
      }
                      completion:^(BOOL finished)
     {
-        NSArray *array = self.constraints;
-        NSLog(@"%lu", (unsigned long)[array count]);
-        
     }];
 }
 
@@ -252,6 +280,5 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
-
 
 @end

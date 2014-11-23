@@ -11,6 +11,5 @@
 @interface ABATextField : UITextField 
 
 @property (nonatomic, strong) UILabel *movablePlaceholder;
-@property (nonatomic, strong) NSString *movablePlaceholderText;
 
 @end

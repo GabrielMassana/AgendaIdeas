@@ -45,7 +45,7 @@
     {
         _nameTextField = [ABATextField newAutoLayoutView];
         _nameTextField.font = [ABAFont openSansRegularFontWithSize:20.0f];
-        _nameTextField.movablePlaceholderText = @"Email";
+        _nameTextField.placeholder = @"Email";
         _nameTextField.textColor = [UIColor blackColor];
     }
     
@@ -58,7 +58,7 @@
     {
         _startsTextField = [ABATextField newAutoLayoutView];
         _startsTextField.font = [ABAFont openSansRegularFontWithSize:20.0f];
-        _startsTextField.movablePlaceholderText = @"Password";
+        _startsTextField.placeholder = @"Password";
         _startsTextField.textColor = [UIColor blackColor];
     }
     
