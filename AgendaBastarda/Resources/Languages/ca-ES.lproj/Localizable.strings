@@ -1,0 +1,14 @@
+/* 
+  Localizable.strings
+  AgendaBastarda
+
+  Created by Jose Antonio Gabriel Massana on 15/11/14.
+  Copyright (c) 2014 GabrielMassana. All rights reserved.
+*/
+
+
+"Starts_Label" = "Comença:";
+"Ends_Label" = "Finalitza:";
+
+"View_Details" = "APRETA PER VEURE DETALLS";
+"Tap_to_Share" = "CLICA DOS COPS PER COMPARTIR";
