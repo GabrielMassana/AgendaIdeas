@@ -10,4 +10,6 @@
 
 @interface ABAColor : NSObject
 
++ (UIColor *)lightLightGrayColor;
+
 @end

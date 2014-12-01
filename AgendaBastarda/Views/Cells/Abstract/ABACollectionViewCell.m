@@ -17,4 +17,9 @@
     return NSStringFromClass([self class]);
 }
 
+- (void)updateWithAddSerieCellData:(ABAAddSerieCell *)addSerieCell
+{
+    
+}
+
 @end

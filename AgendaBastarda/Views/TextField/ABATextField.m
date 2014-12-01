@@ -31,7 +31,7 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 
 #pragma mark - Init
 
-- (id)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
     
@@ -90,7 +90,7 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
     
     if (self.constraintsFase == ABATextFieldConstraintsFaseUnknown)
     {
-        [self.separationLine autoSetDimension:ALDimensionHeight toSize:1.5f];
+        [self.separationLine autoSetDimension:ALDimensionHeight toSize:0.0f];
         
         [self.separationLine autoPinEdge:ALEdgeRight toEdge:ALEdgeRight ofView:self];
         [self.separationLine autoPinEdge:ALEdgeLeft toEdge:ALEdgeLeft ofView:self];
@@ -147,6 +147,12 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
     self.movablePlaceholder.text = placeholder;
 }
 
+- (void)setText:(NSString *)text
+{
+    [super setText:text];
+    [self textDidChange];
+}
+
 - (void)setTextColor:(UIColor *)textColor
 {
     [super setTextColor:textColor];
@@ -182,6 +188,7 @@ typedef NS_ENUM(NSUInteger, ABATextFieldConstraintsFase)
 
 - (void)textDidBeginEditing
 {
+    
 }
 
 - (void)textDidChange

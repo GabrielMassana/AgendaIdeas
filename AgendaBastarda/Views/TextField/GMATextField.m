@@ -94,7 +94,7 @@ typedef NS_ENUM(NSUInteger, GMATextFieldConstraintsFase)
     
     /*-------------------*/
     
-    [self.separationLine autoSetDimension:ALDimensionHeight toSize:1.5f];
+    [self.separationLine autoSetDimension:ALDimensionHeight toSize:0.5f];
     
     [self.separationLine autoPinEdge:ALEdgeRight toEdge:ALEdgeRight ofView:self];
     [self.separationLine autoPinEdge:ALEdgeLeft toEdge:ALEdgeLeft ofView:self];

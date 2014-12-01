@@ -9,6 +9,7 @@
 #import "ABASerieCollectionViewCell.h"
 #import "ABAColor.h"
 #import "ABAFont.h"
+#import "ABAImage.h"
 
 static CGFloat const kImageSizeWidth = 85.0f;
 //static CGFloat const kNameSizeHeight = 50.0f;
@@ -16,11 +17,12 @@ static CGFloat const kFromToSizeHeight = 25.0f;
 static CGFloat const kFromToSizeWidth = 50.0f;
 static CGFloat const kInformationSizeWidth = 10.0f;
 
-@interface ABASerieCollectionViewCell()
+@interface ABASerieCollectionViewCell() <UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) UIImageView *image;
 
 @property (nonatomic, strong) UILabel *nameLabel;
+
 
 @property (nonatomic, strong) UILabel *startsTitleLabel;
 @property (nonatomic, strong) UILabel *startsLabel;
@@ -32,6 +34,11 @@ static CGFloat const kInformationSizeWidth = 10.0f;
 @property (nonatomic, strong) UILabel *informationToShareLabel;
 
 @property (nonatomic, strong) UIView *bottomLine;
+
+@property (nonatomic, strong) UILongPressGestureRecognizer *longPressGestureRecognizer;
+
+
+@property (nonatomic, readonly) NSDateFormatter *dateFormatter;
 
 @end
 
@@ -67,6 +74,7 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     [self.contentView addSubview:self.informationToSeeLabel];
     [self.contentView addSubview:self.informationToShareLabel];
     [self.contentView addSubview:self.bottomLine];
+    [self.contentView addGestureRecognizer:self.longPressGestureRecognizer];
 }
 
 #pragma mark - Subviews
@@ -124,7 +132,6 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     if (!_startsLabel)
     {
         _startsLabel = [UILabel newAutoLayoutView];
-//        _startsLabel.textColor = [FSNColor flingCoachTextGrey];
         _startsLabel.font = [ABAFont openSansRegularFontWithSize:14.0f];
         _startsLabel.textAlignment = NSTextAlignmentRight;
         _startsLabel.backgroundColor = [UIColor clearColor];
@@ -138,7 +145,6 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     if (!_endsTitleLabel)
     {
         _endsTitleLabel = [UILabel newAutoLayoutView];
-//        _endsTitleLabel.textColor = [FSNColor flingCoachTextGrey];
         _endsTitleLabel.font = [ABAFont openSansSemiboldFontWithSize:14.0f];
         _endsTitleLabel.textAlignment = NSTextAlignmentLeft;
         _endsTitleLabel.backgroundColor = [UIColor clearColor];
@@ -153,7 +159,6 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     if (!_endsLabel)
     {
         _endsLabel = [UILabel newAutoLayoutView];
-//        _endsLabel.textColor = [FSNColor flingCoachTextGrey];
         _endsLabel.font = [ABAFont openSansRegularFontWithSize:14.0f];
         _endsLabel.textAlignment = NSTextAlignmentRight;
         _endsLabel.backgroundColor = [UIColor clearColor];
@@ -167,7 +172,6 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     if (!_informationToSeeLabel)
     {
         _informationToSeeLabel = [UILabel newAutoLayoutView];
-//        _informationToSeeLabel.textColor = [FSNColor flingCoachTextGrey];
         _informationToSeeLabel.font = [ABAFont openSansLightFontWithSize:11.0f];
         _informationToSeeLabel.textAlignment = NSTextAlignmentLeft;
         _informationToSeeLabel.backgroundColor = [UIColor clearColor];
@@ -182,7 +186,6 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     if (!_informationToShareLabel)
     {
         _informationToShareLabel = [UILabel newAutoLayoutView];
-//        _informationToShareLabel.textColor = [FSNColor flingCoachTextGrey];
         _informationToShareLabel.font = [ABAFont openSansLightFontWithSize:11.0f];
         _informationToShareLabel.textAlignment = NSTextAlignmentRight;
         _informationToShareLabel.backgroundColor = [UIColor clearColor];
@@ -201,6 +204,36 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     }
     
     return _bottomLine;
+}
+
+#pragma mark - Getters
+
+- (UILongPressGestureRecognizer *)longPressGestureRecognizer
+{
+    if (!_longPressGestureRecognizer)
+    {
+        _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc]initWithTarget:self action:@selector(longPressGestureRecognizerLongTapped:)];
+        _longPressGestureRecognizer.delegate = self;
+        _longPressGestureRecognizer.minimumPressDuration = 0.1;
+    }
+    
+    
+    return _longPressGestureRecognizer;
+}
+
+- (NSDateFormatter *)dateFormatter
+{
+    static NSDateFormatter *dateFormatter = nil;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        
+        dateFormatter = [[NSDateFormatter alloc] init];
+        dateFormatter.dateStyle = NSDateFormatterShortStyle;
+        dateFormatter.timeStyle = NSDateFormatterNoStyle;
+    });
+    
+    return dateFormatter;
 }
 
 #pragma mark - Constraints
@@ -355,6 +388,52 @@ static CGFloat const kInformationSizeWidth = 10.0f;
     [self.bottomLine autoPinEdgeToSuperviewEdge:ALEdgeBottom
                                       withInset:0.0f];
     
+}
+
+#pragma mark - GestureActions
+
+- (void)longPressGestureRecognizerLongTapped:(UIGestureRecognizer *)sender
+{
+    switch (sender.state)
+    {
+        case UIGestureRecognizerStateChanged:
+            NSLog(@"Changed");
+            
+            [self.delegate longPressGestureRecognizerChanged:sender cell:self];
+            
+            break;
+
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+        case UIGestureRecognizerStateFailed:
+            
+            NSLog(@"Ended");
+            [self.delegate longPressGestureRecognizerEnded];
+            
+            break;
+        default:
+            break;
+    }
+}
+
+#pragma mark - UIGestureRecognizerDelegate
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    NSLog(@"Delegate Began");
+    
+    [self.delegate longPressGestureRecognizerShouldBegin:gestureRecognizer cell:self];
+    
+    return YES;
+}
+
+- (void)updateWithPersistentSerieCellData:(ABASerie *)serie
+{
+    self.serie = serie;
+    self.nameLabel.text = serie.name;
+    self.startsLabel.text = [self.dateFormatter stringFromDate:serie.start];
+    self.endsLabel.text = [self.dateFormatter stringFromDate:serie.end];
+    self.image.image = [UIImage imageWithData:serie.image.image];
 }
 
 @end

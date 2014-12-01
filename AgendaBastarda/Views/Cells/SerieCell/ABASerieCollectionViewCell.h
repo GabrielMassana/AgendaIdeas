@@ -7,14 +7,28 @@
 //
 
 #import "ABACollectionViewCell.h"
+#import "ABASerie.h"
+
+@class ABASerieCollectionViewCell;
+
+@protocol ABASerieCollectionViewCellDelegate <NSObject>
+
+- (void)longPressGestureRecognizerShouldBegin:(UIGestureRecognizer *)sender cell: (ABASerieCollectionViewCell *) cell;
+- (void)longPressGestureRecognizerChanged:(UIGestureRecognizer *)sender cell: (ABASerieCollectionViewCell *) cell;
+- (void)longPressGestureRecognizerEnded;
+
+@end
 
 @interface ABASerieCollectionViewCell : ABACollectionViewCell
 
 /**
- Update the cell with  Data.
- @param serie the serie object to update the cell.
+ Update the cell with Data.
+ @param serie Serie Data information.
  */
-//- (void)updateWith:(NSDAta *)serie;
-//TODO: change method name
+- (void)updateWithPersistentSerieCellData:(ABASerie *)serie;
+
+@property (nonatomic, weak) id<ABASerieCollectionViewCellDelegate> delegate;
+
+@property (nonatomic, strong) ABASerie *serie;
 
 @end

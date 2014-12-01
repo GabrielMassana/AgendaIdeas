@@ -8,6 +8,21 @@
 
 #import <UIKit/UIKit.h>
 
+@class ABASerie;
+
+typedef NS_ENUM(NSUInteger, ABAAddSerieFilmTypeViewController)
+{
+    ABAAddSerieFilmTypeViewControllerSave  = 0,
+    ABAAddSerieFilmTypeViewControllerEdit  = 1,
+};
+
 @interface ABAAddSerieFormViewController : UIViewController
+
+- (instancetype)initWithViewControllerType:(ABAAddSerieFilmTypeViewController)typeViewController;
+
+@property (nonatomic, strong) UIButton *finishButton;
+@property (nonatomic, assign) ABAAddSerieFilmTypeViewController typeViewController;
+
+- (void)updateWithSerie:(ABASerie *)serie;
 
 @end

@@ -12,4 +12,6 @@
 
 @property (nonatomic, strong) UILabel *movablePlaceholder;
 
+- (void)textDidChange;
+
 @end

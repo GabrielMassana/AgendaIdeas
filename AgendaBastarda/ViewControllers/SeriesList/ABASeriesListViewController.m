@@ -10,6 +10,8 @@
 #import "ABASerieCollectionViewCell.h"
 #import "ABAAddSerieFormViewController.h"
 #import "ABAAddFilmFormViewController.h"
+#import "ABAAppDelegate.h"
+#import "ABASerie.h"
 
 typedef NS_ENUM(NSUInteger, ABAConstraintsFase)
 {
@@ -22,7 +24,7 @@ static CGFloat const kCellHeightSize = 150.0f;
 
 static CGFloat const kButtonSize = 90.0f;
 
-@interface ABASeriesListViewController () <UICollectionViewDataSource, UICollectionViewDelegate>
+@interface ABASeriesListViewController () <UICollectionViewDataSource, UICollectionViewDelegate, ABASerieCollectionViewCellDelegate, NSFetchedResultsControllerDelegate>
 
 @property (nonatomic, strong) UIButton *addNewSerieButton;
 @property (nonatomic, strong) UIButton *settingsButton;
@@ -44,10 +46,20 @@ static CGFloat const kButtonSize = 90.0f;
 
 @property (nonatomic, assign) ABAConstraintsFase constraintsFase;
 
+@property (nonatomic, strong) ABAAppDelegate *appDelegate;
+
+@property (strong, nonatomic) NSManagedObjectContext *managedObjectContext;
+
+@property (nonatomic, strong) ABAAddSerieFormViewController *addSerieFormViewController;
+@property (nonatomic, assign) CGPoint gestureRecognizerLastLocation;
+
 /**
  Used to connect the CollectionView with Core Data.
  */
-//@property (nonatomic, strong) NSFetchedResultsController *fetchedResultsController;
+@property (nonatomic, strong) NSFetchedResultsController *fetchedResultsController;
+
+@property (nonatomic, strong) NSMutableArray *sectionChanges;
+@property (nonatomic, strong) NSMutableArray *itemChanges;
 
 @end
 
@@ -58,6 +70,9 @@ static CGFloat const kButtonSize = 90.0f;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    self.appDelegate = (ABAAppDelegate *)[[UIApplication sharedApplication] delegate];
+    self.gestureRecognizerLastLocation = CGPointZero;
     
     self.view.backgroundColor = [UIColor whiteColor];
     
@@ -73,6 +88,12 @@ static CGFloat const kButtonSize = 90.0f;
     [self updateViewConstraints];
 }
 
+- (void)viewWillAppear:(BOOL)animated
+{
+    self.navigationController.navigationBarHidden = NO;
+    self.navigationController.hidesBarsOnSwipe = YES;
+    self.navigationController.hidesBarsWhenKeyboardAppears = YES;
+}
 //http://stackoverflow.com/questions/12622424/how-do-i-animate-constraint-changes
 
 #pragma mark - Subviews
@@ -160,6 +181,46 @@ static CGFloat const kButtonSize = 90.0f;
     }
     
     return _filmButton;
+}
+
+#pragma mark - Getters
+
+- (ABAAddSerieFormViewController *)addSerieFormViewController
+{
+    if (!_addSerieFormViewController)
+    {
+        _addSerieFormViewController = [[ABAAddSerieFormViewController alloc] initWithViewControllerType:ABAAddSerieFilmTypeViewControllerEdit];
+    }
+    
+    return _addSerieFormViewController;
+}
+
+- (NSFetchedResultsController *)fetchedResultsController
+{
+    if (!_fetchedResultsController)
+    {
+        ABAAppDelegate *delegate = [[UIApplication sharedApplication] delegate];
+        self.managedObjectContext = delegate.managedObjectContext;
+
+        
+        NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] init];
+        fetchRequest.entity = [NSEntityDescription entityForName:NSStringFromClass([ABASerie class])
+                                          inManagedObjectContext:self.managedObjectContext];
+        
+        NSSortDescriptor *orderSortDescriptor = [NSSortDescriptor sortDescriptorWithKey:@"start"
+                                                                              ascending:YES];
+        fetchRequest.sortDescriptors = @[orderSortDescriptor];
+        
+        _fetchedResultsController = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
+                                                                        managedObjectContext:self.managedObjectContext
+                                                                          sectionNameKeyPath:nil
+                                                                                   cacheName:nil];
+        
+        _fetchedResultsController.delegate = self;
+        [_fetchedResultsController performFetch:nil];
+    }
+    
+    return _fetchedResultsController;
 }
 
 #pragma mark - Constraints
@@ -264,7 +325,8 @@ static CGFloat const kButtonSize = 90.0f;
 - (void)addNewSerieButtonTouchDown:(UIButton *)sender
 {
     self.constraintsFase = ABAConstraintsFaseDown;
-    
+    self.navigationController.hidesBarsOnSwipe = NO;
+
     [self animateButtonsWithFinalAlpha:1.0f];
 }
 
@@ -278,6 +340,7 @@ static CGFloat const kButtonSize = 90.0f;
     [self checkTouchPoint:touchPoint];
     
     [self animateButtonsWithFinalAlpha:0.0f];
+    self.navigationController.hidesBarsOnSwipe = YES;
 }
 
 - (void)addNewSerieButtonTouchUpOutside:(UIButton *)sender withEvent:(UIEvent *)event
@@ -290,6 +353,7 @@ static CGFloat const kButtonSize = 90.0f;
     [self checkTouchPoint:touchPoint];
     
     [self animateButtonsWithFinalAlpha:0.0f];
+    self.navigationController.hidesBarsOnSwipe = YES;
 }
 
 - (void)animateButtonsWithFinalAlpha:(CGFloat)alpha
@@ -340,7 +404,7 @@ static CGFloat const kButtonSize = 90.0f;
      }];
 }
 
-#pragma mark AddController
+#pragma mark - AddController
 
 - (void)checkTouchPoint:(CGPoint)touchPoint
 {
@@ -356,7 +420,7 @@ static CGFloat const kButtonSize = 90.0f;
 
 - (void) pushAddSerieViewControllerAnimated:(BOOL)animated
 {
-    ABAAddSerieFormViewController *addSerieFormViewController = [[ABAAddSerieFormViewController alloc] init];
+    ABAAddSerieFormViewController *addSerieFormViewController = [[ABAAddSerieFormViewController alloc] initWithViewControllerType:ABAAddSerieFilmTypeViewControllerSave];
     [self.navigationController pushViewController:addSerieFormViewController animated:animated];
 }
 
@@ -383,8 +447,7 @@ static CGFloat const kButtonSize = 90.0f;
 
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
 {
-    //    return [self.fetchedResultsController.fetchedObjects count];
-    return 0;
+    return [self.fetchedResultsController.fetchedObjects count];
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
@@ -393,8 +456,10 @@ static CGFloat const kButtonSize = 90.0f;
     
     cell = [collectionView dequeueReusableCellWithReuseIdentifier:[ABASerieCollectionViewCell reuseIdentifier]
                                                      forIndexPath:indexPath];
+    cell.delegate = self;
     
-    //    [cell updateWithFling:self.fetchedResultsController.fetchedObjects[indexPath.row]];
+    [cell updateWithPersistentSerieCellData:self.fetchedResultsController.fetchedObjects[indexPath.row]];
+    cell.tag = indexPath.row;
     
     /*---------------------*/
     
@@ -413,6 +478,174 @@ static CGFloat const kButtonSize = 90.0f;
 {
     return CGSizeMake([[UIScreen mainScreen] bounds].size.width,
                       kCellHeightSize);
+}
+
+#pragma mark - UICollectionViewDelegate
+
+
+#pragma mark - ABASerieCollectionViewCellDelegate
+
+- (void)longPressGestureRecognizerShouldBegin:(UIGestureRecognizer *)sender cell: (ABASerieCollectionViewCell *) cell
+{
+    NSLog(@"longPressGestureRecognizerShouldBegin");
+    
+    [self addChildViewController:self.addSerieFormViewController];
+    self.addSerieFormViewController.view.frame = [[UIScreen mainScreen] bounds];
+
+    [self.addSerieFormViewController updateWithSerie:cell.serie];
+    
+    [self.view addSubview:self.addSerieFormViewController.view];
+    self.navigationController.navigationBar.hidden = YES;
+
+    [self.addSerieFormViewController didMoveToParentViewController:self];
+}
+
+- (void)longPressGestureRecognizerChanged:(UIGestureRecognizer *)sender cell: (ABASerieCollectionViewCell *) cell;
+{
+    NSLog(@"longPressGestureRecognizerChanged");
+    
+    CGPoint location = [sender locationInView:self.appDelegate.window];
+    
+    NSLog(@"location = %@", NSStringFromCGPoint(location));
+    
+    //Store last location
+    self.gestureRecognizerLastLocation = location;
+}
+
+- (void)longPressGestureRecognizerEnded
+{
+    NSLog(@"longPressGestureRecognizerEnded");
+    
+    [self.addSerieFormViewController willMoveToParentViewController:nil];
+    [self.addSerieFormViewController.view removeFromSuperview];
+    [self.addSerieFormViewController removeFromParentViewController];
+    self.navigationController.navigationBar.hidden = NO;
+
+    // Check if location is over Edit Button, if yes open it
+    if (CGRectContainsPoint(self.addSerieFormViewController.finishButton.frame, self.gestureRecognizerLastLocation))
+    {
+        [self pushAddSerieViewControllerAnimated:NO];
+        self.gestureRecognizerLastLocation = CGPointZero;
+
+    }
+//    self.addSerieFormViewController = nil;
+}
+
+#pragma mark - NSFetchedResultsControllerDelegate
+// http://samwize.com/2014/07/07/implementing-nsfetchedresultscontroller-for-uicollectionview/
+- (void)controllerWillChangeContent:(NSFetchedResultsController *)controller
+{
+    self.sectionChanges = [[NSMutableArray alloc] init];
+    self.itemChanges = [[NSMutableArray alloc] init];
+}
+
+- (void)controller:(NSFetchedResultsController *)controller
+  didChangeSection:(id <NSFetchedResultsSectionInfo>)sectionInfo
+           atIndex:(NSUInteger)sectionIndex
+     forChangeType:(NSFetchedResultsChangeType)type
+{
+    NSMutableDictionary *change = [[NSMutableDictionary alloc] init];
+    
+    change[@(type)] = @(sectionIndex);
+    
+    [self.sectionChanges addObject:change];
+}
+
+-(void)controller:(NSFetchedResultsController *)controller
+  didChangeObject:(id)anObject
+      atIndexPath:(NSIndexPath *)indexPath
+    forChangeType:(NSFetchedResultsChangeType)type
+     newIndexPath:(NSIndexPath *)newIndexPath;
+{
+    NSMutableDictionary *change = [[NSMutableDictionary alloc] init];
+    switch(type)
+    {
+        case NSFetchedResultsChangeInsert:
+            
+            change[@(type)] = newIndexPath;
+            
+            break;
+        case NSFetchedResultsChangeDelete:
+            
+            change[@(type)] = indexPath;
+            
+            break;
+        case NSFetchedResultsChangeUpdate:
+            
+            change[@(type)] = indexPath;
+            
+            break;
+        case NSFetchedResultsChangeMove:
+                        
+            change[@(type)] = @[indexPath, newIndexPath];
+            
+            break;
+    }
+    
+    [self.itemChanges addObject:change];
+}
+
+- (void)controllerDidChangeContent:(NSFetchedResultsController *)controller
+{
+    [self.collectionView performBatchUpdates:^
+    {
+        for (NSDictionary *change in self.sectionChanges)
+        {
+            [change enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop)
+            {
+                NSFetchedResultsChangeType type = [key unsignedIntegerValue];
+                switch(type)
+                {
+                    case NSFetchedResultsChangeInsert:
+                        
+                        [self.collectionView insertSections:[NSIndexSet indexSetWithIndex:[obj unsignedIntegerValue]]];
+                        break;
+                    
+                    case NSFetchedResultsChangeDelete:
+                        
+                        [self.collectionView deleteSections:[NSIndexSet indexSetWithIndex:[obj unsignedIntegerValue]]];
+                        break;
+                    
+                    default:
+                        break;
+                }
+            }];
+        }
+        for (NSDictionary *change in self.itemChanges)
+        {
+            [change enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop)
+            {
+                NSFetchedResultsChangeType type = [key unsignedIntegerValue];
+                switch(type)
+                {
+                    case NSFetchedResultsChangeInsert:
+                        
+                        [self.collectionView insertItemsAtIndexPaths:@[obj]];
+                        break;
+                        
+                    case NSFetchedResultsChangeDelete:
+                        
+                        [self.collectionView deleteItemsAtIndexPaths:@[obj]];
+                        break;
+                        
+                    case NSFetchedResultsChangeUpdate:
+                        
+                        [self.collectionView reloadItemsAtIndexPaths:@[obj]];
+                        break;
+                        
+                    case NSFetchedResultsChangeMove:
+                        
+                        [self.collectionView moveItemAtIndexPath:obj[0] toIndexPath:obj[1]];
+                        break;
+                }
+            }];
+        }
+    }
+                                  completion:^(BOOL finished) {
+                                      
+        self.sectionChanges = nil;
+        self.itemChanges = nil;
+    }];
 }
 
 #pragma mark - Memory Management
